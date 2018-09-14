@@ -1,0 +1,11 @@
+../tb.v
++incdir+../../design/rtl
++incdir+../../design/bhv
+../../design/rtl/define.v
+../../design/rtl/uart_rx.v
+../../design/rtl/uart_tx.v
+../../design/rtl/baud_sel.v
+../../design/rtl/fifo.v
+../../design/rtl/fifo_uart.v
+../../design/rtl/uart_fifo.v
+../../design/rtl/top.v

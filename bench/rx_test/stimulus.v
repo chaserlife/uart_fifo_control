@@ -1,0 +1,14 @@
+tb.rst_n = 1'b1;
+tb.rst_n = 1'b0;
+#1ms;
+tb.rst_n = 1'b1;
+#100; tx_pc(8'h00);
+#100; tx_pc(8'h05);
+#100; tx_pc(8'h55);
+#100; tx_pc(8'h44);
+#100; tx_pc(8'h33);
+#100; tx_pc(8'h22);
+#100; tx_pc(8'h11);
+#100; tx_pc(8'h00);
+#30ms;
+$finish;
