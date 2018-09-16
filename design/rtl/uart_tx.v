@@ -4,7 +4,6 @@ module uart_tx(
     input      start,
     input[7:0] data,
     output     miso,
-    output     busy,
     output reg ok
 );
 reg[7:0] tx_cnt,next_tx_cnt;
@@ -58,5 +57,4 @@ always@(*)begin
         end
     endcase
 end
-assign busy = !(state == idle);
 endmodule

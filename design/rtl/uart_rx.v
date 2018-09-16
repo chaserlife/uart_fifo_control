@@ -1,6 +1,7 @@
 module uart_rx(
     input           rst_n,
     input           mosi,
+    input           start_rx,
     input           clk,
     output          ok,
     output reg[7:0] data
@@ -40,7 +41,7 @@ always@(*)begin
     case(state)
         idle:begin
             next_rx_ok = 1'b0;
-            if(!mosi)begin
+            if(start_rx&!mosi)begin
                 next_state = rec_data;
                 next_cnt   = 8;
             end

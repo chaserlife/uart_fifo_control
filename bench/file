@@ -6,6 +6,10 @@
 ../../design/rtl/uart_tx.v
 ../../design/rtl/baud_sel.v
 ../../design/rtl/fifo.v
-../../design/rtl/fifo_uart.v
-../../design/rtl/uart_fifo.v
+../../design/rtl/fifo_top.v
+../../design/rtl/fifo_control.v
+../../design/rtl/FELOGIC.v
 ../../design/rtl/top.v
+../../design/rtl/sd_top.v
+../../design/rtl/sd_initial.v
+../../design/bhv/SD.v

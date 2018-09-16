@@ -2,18 +2,22 @@ module baud_sel(
     input      clk,
     input      rst_n,
     output reg clk_bps,
-    input      mosi
+    input      mosi,
+    input[2:0] mode
 );
 reg[12:0] cnt;
 reg[7:0]  rx;
+wire[12:0] cmp;
 parameter bps9600=5208/2;
+assign cmp = mode==0 ? bps9600 : 0;
+      
 wire RSTn;
 always@(posedge clk or negedge RSTn)begin
     if(!RSTn)begin
         cnt <= 0;
     end
     else begin
-        cnt <= cnt <bps9600 ? cnt + 1 : 0;
+        cnt <= cnt < cmp ? cnt + 1 : 0;
     end
 end
 always@(posedge clk or negedge RSTn)begin
@@ -21,7 +25,7 @@ always@(posedge clk or negedge RSTn)begin
         clk_bps = 1'b0;
     end
     else begin
-        clk_bps = cnt==bps9600 ? ~clk_bps : clk_bps;
+        clk_bps = cnt==cmp ? ~clk_bps : clk_bps;
     end
 end
 always@(posedge clk or negedge rst_n)begin

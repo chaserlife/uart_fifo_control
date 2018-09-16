@@ -4,9 +4,20 @@ reg mosi=1;
 reg clk;
 reg rst_n;
 top top(
-     .rst_n(rst_n)
-    ,.clk  (clk  )
-    ,.mosi (mosi )
+     .rst_n   (rst_n    )
+    ,.clk     (clk      )
+    ,.mosi    (mosi     )
+
+    ,.sd_ck   (sd_ck    )
+    ,.sd_mosi (sd_mosi  )
+    ,.sd_miso (sd_miso  )
+    ,.sd_csn  (sd_csn   )
+);
+SD SD(
+     .rst_n (rst_n   )
+    ,.SD_CLK(sd_ck   )
+    ,.SD_IN (sd_mosi )
+    ,.SD_OUT(sd_miso )
 );
 initial begin
     #40ms $display("ERROR:overtime");$finish;
