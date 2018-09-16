@@ -5,8 +5,8 @@ module sd_initial(
     input           rst_n,
     input           sd_ck,
     input           sd_miso,
-    output          sd_mosi,
-    output          sd_csn,
+    output reg      sd_mosi,
+    output reg      sd_csn,
     input           sd_init,//start init
     output reg      init_ok
     //output reg[3:0] state,
@@ -33,12 +33,11 @@ reg[47:0]rx;
 
 reg[5:0] state,next_state;
 reg      next_init_ok;
-reg      sd_mosi,next_sd_mosi;
-reg      sd_csn,next_sd_csn;
+reg      next_sd_mosi;
+reg      next_sd_csn;
 reg[5:0] tx_cnt,next_tx_cnt;
 reg[47:0]data,next_data;
 reg[9:0] cnt,next_cnt;
-wire     sd_miso;
 
 always@(posedge sd_ck or negedge rst_n)begin
     if(!rst_n)begin

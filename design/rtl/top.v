@@ -16,8 +16,7 @@ wire[7:0]  mosi_rx;
 wire[7:0]  cmd;
 wire[15:0] rx_cnt;
 fifo_control fifo_control(
-     .clk        (clk         )
-    ,.rst_n      (rst_n       )
+     .rst_n      (rst_n       )
     ,.mosi       (mosi        )
     ,.miso       (miso        )
     ,.miso_rx    (mosi_rx     )
