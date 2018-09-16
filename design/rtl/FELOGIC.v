@@ -5,7 +5,7 @@ module FELOGIC(
     input           fifo_done,
     input[7:0]      mosi,
     output reg[7:0] cmd,
-    output reg[7:0] rx_cnt,
+    output reg[15:0]rx_cnt,
     output reg      busy
 );
     reg[2:0] rx_flag;
@@ -22,10 +22,10 @@ module FELOGIC(
             rx_cnt <= 0;
         end
         else if(rok&rx_flag==3'b001)begin
-            rx_cnt <= {rx_cnt,mosi};
+            rx_cnt <= {rx_cnt[7:0],mosi};
         end
         else if(rok&rx_flag==3'b010)begin
-            rx_cnt <= {rx_cnt,mosi};
+            rx_cnt <= {rx_cnt[7:0],mosi};
         end
         else if(rok&rx_flag==3'b000)begin
             rx_cnt <= 0;
