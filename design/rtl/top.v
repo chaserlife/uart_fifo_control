@@ -29,6 +29,7 @@ fifo_control fifo_control(
     ,.sd_init    (sd_init     )
     ,.init_ok    (init_ok     )
     ,.fifo_busy  (fifo_busy   )
+    ,.fe_done    (fe_done     )
     ,.sd_read_ok (1'b0        )
 );
 FELOGIC FELOGIC(

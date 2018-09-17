@@ -23,7 +23,7 @@ module FELOGIC(
             busy_sync1 <= busy_sync;
         end
     end
-    assign fe_done = busy_sync1&!busy_sync;
+    assign fe_done = !busy_sync1&busy_sync;
     always@(posedge clk or negedge rst_n)begin
         if(!rst_n)begin
             rx_cnt <= 0;
