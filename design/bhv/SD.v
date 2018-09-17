@@ -25,7 +25,11 @@ parameter send_cmd0   =4'b0001,
           //dummy       =4'b1010, 
           //wait_st     =4'b1011; 
 reg[2:0] seq,next_seq;
-wire[5:0] cmd0_r = tb.top.sd_top.sd_initial.state==1&tb.top.sd_top.sd_initial.tx_cnt==0;
+assign cmd0_r = tb.top.sd_initial.state==1&tb.top.sd_initial.tx_cnt==0|//cmd0
+                tb.top.sd_initial.state==2&tb.top.sd_initial.tx_cnt==0|//cmd8
+                tb.top.sd_initial.state==4&tb.top.sd_initial.tx_cnt==0;//cmdacmd41
+assign cmd5_r = tb.top.sd_initial.state==3&tb.top.sd_initial.tx_cnt==0|//cmd55
+                tb.top.sd_initial.state==3&tb.top.sd_initial.tx_cnt==0;//cmd55
 //tb.DUT.init_o&tb.DUT.sd_read.read_seq&!tb.DUT.sd_read.ok    ? tb.DUT.sd_read.state :
 //                    tb.DUT.init_o&tb.DUT.sd_write.write_seq&!tb.DUT.sd_write.ok ? tb.DUT.sd_write.state :
 //                    tb.DUT.sd_initial.state;
@@ -59,73 +63,13 @@ reg[7:0]  cnt,next_cnt;
         next_seq    = seq;
         case(state)
             idle:begin
-                //if(!tb.DUT.init_o&state_r==4'b0010)begin
-                //    next_state  = wait_st;
-                //    next_tx_cnt = 48;
-                //    next_data   = `DATA_R1_CMD0;
-                //    next_cmp    = state_r;
-                //    next_SD_OUT = 1;
-                //    next_cnt    = 8;
-                //    next_seq    = 1;
-                //end
-                //else if(!tb.DUT.init_o&state_r==waita)begin
-                //    next_state  = send_cmd0_r;
-                //    next_tx_cnt = 48;
-                //    next_data   = `DATA_R7_CMD8;
-                //    next_cmp    = state_r;
-                //    next_SD_OUT = 1;
-                //    next_seq    = 1;
-                //end
-                //else if(!tb.DUT.init_o&state_r==send_cmd55&(|tb.DUT.sd_initial.cnt))begin
-                //    next_state  = send_cmd0_r;
-                //    next_tx_cnt = 48;
-                //    next_data   = `DATA_R1_CMD55;
-                //    next_cmp    = state_r;
-                //    next_SD_OUT = 1;                  
-                //    next_seq    = 1;
-                //end
-                //else if(!tb.DUT.init_o&state_r==send_acmd41&(|tb.DUT.sd_initial.cnt))begin
-                //    next_state  = send_cmd0_r;
-                //    next_tx_cnt = 48;
-                //    next_data   = `DATA_R1_ACMD41;
-                //    next_cmp    = state_r;
-                //    next_SD_OUT = 1;                  
-                //    next_seq    = 1;
-                //end
-                //else if(!tb.DUT.sd_read.ok&tb.DUT.init_o&tb.DUT.sd_read.read_seq&state_r==tb.DUT.sd_read.read_cmd_resp)begin
-                //    next_state  = send_cmd0_r;
-                //    next_tx_cnt = 48;
-                //    next_data   = `DATA_R1_CMD17;
-                //    next_cmp    = state_r;
-                //    next_SD_OUT = 1;                  
-                //    next_seq    = 2;
-                //end
-                //else if(!tb.DUT.sd_read.ok&tb.DUT.init_o&tb.DUT.sd_read.read_seq&state_r==tb.DUT.sd_read.dummy)begin
-                //    next_state  = send_cmd0_r;
-                //    next_tx_cnt = 48;
-                //    next_data   = {8'hfe,8'h00};
-                //    next_cmp    = state_r;
-                //    next_SD_OUT = 1;                  
-                //    next_seq    = 2;
-                //end
-                //else if(tb.DUT.init_o&tb.DUT.sd_write.write_seq&state_r==tb.DUT.sd_write.write_cmd)begin
-                //    next_state  = send_cmd0_r;
-                //    next_tx_cnt = 48+48;
-                //    next_data   = {{48{1'b1}},{40{1'b1}},8'h00};
-                //    next_cmp    = state_r;
-                //    next_SD_OUT = 1;                  
-                //    next_seq    = 3;
-                //end
-                //else if(tb.DUT.init_o&tb.DUT.sd_write.write_seq&state_r==tb.DUT.sd_write.write_dummy)begin
-                //    next_state  = send_cmd0_r;
-                //    next_tx_cnt = 48;
-                //    next_data   = 8'h00;
-                //    next_cmp    = state_r;
-                //    next_SD_OUT = 1;                  
-                //    next_seq    = 3;
-                //end
                 if(cmd0_r)begin
                      next_data   = `DATA_R1_CMD0;
+                     next_state  = send_r1;
+                     next_tx_cnt = 8;
+                end
+                else if(cmd5_r)begin
+                     next_data   = `DATA_R1_CMD5;
                      next_state  = send_r1;
                      next_tx_cnt = 8;
                 end
@@ -135,12 +79,12 @@ reg[7:0]  cnt,next_cnt;
                 end
             end
             send_r1:begin
-                if(tx_cnt==1)begin
-                    next_state  = idle;
+                if(|tx_cnt)begin
                     next_SD_OUT = data[tx_cnt-1];
                 end
                 else begin
-                    next_SD_OUT = data[tx_cnt-1];
+                    next_SD_OUT = 1'b1;
+                    next_state  = idle;
                 end
             end
             //wait_st:begin

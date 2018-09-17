@@ -6,17 +6,24 @@ module FELOGIC(
     input[7:0]      mosi,
     output reg[7:0] cmd,
     output reg[15:0]rx_cnt,
-    output reg      busy
+    output          fe_done
 );
     reg[2:0] rx_flag;
+    reg      busy,busy_sync,busy_sync1;
     always@(posedge clk or negedge rst_n)begin
         if(!rst_n)begin
-            busy <= 1'b0;
+            busy       <= 1'b0;
+            busy_sync  <= 1'b0;
+            busy_sync1 <= 1'b0;
         end
+        
         else begin
-            busy <= fifo_done;
+            busy       <= fifo_done;
+            busy_sync  <= busy;
+            busy_sync1 <= busy_sync;
         end
     end
+    assign fe_done = busy_sync1&!busy_sync;
     always@(posedge clk or negedge rst_n)begin
         if(!rst_n)begin
             rx_cnt <= 0;

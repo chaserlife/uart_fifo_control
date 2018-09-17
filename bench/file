@@ -9,7 +9,7 @@
 ../../design/rtl/fifo_top.v
 ../../design/rtl/fifo_control.v
 ../../design/rtl/FELOGIC.v
-../../design/rtl/top.v
-../../design/rtl/sd_top.v
 ../../design/rtl/sd_initial.v
+../../design/rtl/top.v
+#../../design/rtl/sd_top.v
 ../../design/bhv/SD.v

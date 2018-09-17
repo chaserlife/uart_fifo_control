@@ -6,13 +6,15 @@ module fifo_control(
     output[7:0] miso_rx,
     input[7:0]  cmd,
     output      fifo_done,
+    output      fifo_busy,
     output      rok,
     output      clk_bps,
     input[15:0] rx_cnt,
-    input       busy,
+    input       fe_done,
     output reg  sd_init,
     input       init_ok,
-    output reg  sd_ren
+    output reg  sd_ren,
+    input       sd_read_ok
 );
 wire wok;
 wire fifo_rdy;
@@ -21,7 +23,8 @@ parameter idle       = 0,
           send_rx    = 1,
           send_tx    = 2,
           done       = 3,
-          initial_sd = 4;
+          initial_sd = 4,
+          sd_read    = 5;
 reg        start_rx,next_start_rx;
 reg        start_tx,next_start_tx;
 reg        en_fifo,next_en_fifo;
@@ -80,7 +83,7 @@ always@(*)begin
             end
             else if(cmd==8'h02)begin
                 next_state    = initial_sd;
-                next_sd_init  = 1'b1;
+                next_cnt      = rx_cnt;
             end
             else if(cmd==8'h03)begin
                 next_state    = sd_read;
@@ -119,9 +122,17 @@ always@(*)begin
             end
         end
         initial_sd:begin
-            if(init_ok)begin
+            next_req = rok;
+            en       = !req&rok;
+            next_cnt = en ? cnt - |cnt : cnt;
+            if(|cnt)begin
+            end
+            else if(init_ok)begin
                 next_state   = done;
                 next_sd_init = 1'b0;
+            end
+            else begin
+                next_sd_init  = 1'b1;
             end
         end
         sd_read:begin
@@ -132,14 +143,15 @@ always@(*)begin
         end
         done:begin
             next_start_tx = 1'b0;
-            next_state    = idle;
-            //if(busy)begin
-            //    next_state   = idle;
-            //end
+            //next_state    = idle;
+            if(fe_done)begin
+                next_state   = idle;
+            end
         end
     endcase
 end
 assign fifo_done =  state == done;
+assign fifo_busy = !(state==idle);
 fifo_top fifo_top(
      .clk       (clk       )
     ,.rst_n     (rst_n     )
