@@ -11,7 +11,8 @@ module fifo_control(
     input[15:0] rx_cnt,
     input       busy,
     output reg  sd_init,
-    input       init_ok
+    input       init_ok,
+    output reg  sd_ren
 );
 wire wok;
 wire fifo_rdy;
@@ -29,6 +30,7 @@ reg        rclk,next_rclk;
 reg        wclk,next_wclk;
 reg        req,next_req;
 reg        next_sd_init;
+reg        next_sd_ren;
 always@(posedge clk or negedge rst_n)begin
     if(!rst_n)begin
         state    <= idle;
@@ -40,6 +42,7 @@ always@(posedge clk or negedge rst_n)begin
         wclk     <= 1'b0;
         rclk     <= 1'b0;
         sd_init  <= 1'b0;
+        sd_ren   <= 1'b0;
     end
     else begin
         state    <= next_state;
@@ -51,6 +54,7 @@ always@(posedge clk or negedge rst_n)begin
         wclk     <= next_wclk;
         rclk     <= next_rclk;
         sd_init  <= next_sd_init;
+        sd_ren   <= next_sd_ren;
     end
 end
 //wire en = !req&rok;
@@ -66,6 +70,7 @@ always@(*)begin
     next_rclk     = rclk;
     en            = 1'b0;
     next_sd_init  = sd_init;
+    next_sd_ren   = sd_ren;
     case(state)
         idle:begin
             next_start_rx = 1'b1;
@@ -76,6 +81,10 @@ always@(*)begin
             else if(cmd==8'h02)begin
                 next_state    = initial_sd;
                 next_sd_init  = 1'b1;
+            end
+            else if(cmd==8'h03)begin
+                next_state    = sd_read;
+                next_sd_ren   = 1'b1;
             end
         end
         send_rx:begin
@@ -111,14 +120,22 @@ always@(*)begin
         end
         initial_sd:begin
             if(init_ok)begin
+                next_state   = done;
+                next_sd_init = 1'b0;
+            end
+        end
+        sd_read:begin
+            if(sd_read_ok)begin
                 next_state = done;
+                next_sd_ren = 1'b0;
             end
         end
         done:begin
             next_start_tx = 1'b0;
-            if(busy)begin
-                next_state   = idle;
-            end
+            next_state    = idle;
+            //if(busy)begin
+            //    next_state   = idle;
+            //end
         end
     endcase
 end

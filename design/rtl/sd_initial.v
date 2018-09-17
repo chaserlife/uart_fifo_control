@@ -8,7 +8,9 @@ module sd_initial(
     output reg      sd_mosi,
     output reg      sd_csn,
     input           sd_init,//start init
-    output reg      init_ok
+    output reg      init_ok,
+    input           sd_ren,
+    output req[7:0] sd_miso_data
     //output reg[3:0] state,
     //output reg[47:0] rx
 );
@@ -38,7 +40,7 @@ reg      next_sd_csn;
 reg[5:0] tx_cnt,next_tx_cnt;
 reg[47:0]data,next_data;
 reg[9:0] cnt,next_cnt;
-
+reg[2:0] req,next_req;
 always@(posedge sd_ck or negedge rst_n)begin
     if(!rst_n)begin
         rx <= 48'hff_ff_ff_ff_ff_ff;
@@ -59,6 +61,7 @@ always@(negedge sd_ck or negedge rst_n)begin
         tx_cnt    <= 0;
         data      <= 0;
         cnt       <= 0;
+        req       <= 0;
     end
     else begin
         state     <= next_state;
@@ -68,6 +71,7 @@ always@(negedge sd_ck or negedge rst_n)begin
         tx_cnt    <= next_tx_cnt;
         data      <= next_data;
         cnt       <= next_cnt;
+        req       <= next_req;
     end
 end
 always@(*)begin
@@ -78,6 +82,7 @@ always@(*)begin
     next_sd_csn    = sd_csn;
     next_data      = data;
     next_cnt       = cnt  - |cnt;
+    next_req       = req;
     case(state)
         idle:begin
             next_cnt        = 1023;
@@ -86,6 +91,12 @@ always@(*)begin
             next_init_ok    = init_ok;
             if(!init_ok&sd_init)begin
                 next_state     = dummy;
+            end
+            else if(init_ok&sd_ren)begin
+                next_state     = send_cmd17;
+                next_sd_mosi   = `CMD17>>47;
+                next_data      = `CMD17;
+                next_tx_cnt    = 47;
             end
         end
         dummy:begin
@@ -112,107 +123,88 @@ always@(*)begin
             end
         end
         send_cmd8:begin
-//R7
-//[39:0] R1
-//[31:28] command version
-//[27:12] reserved bits
-//[11:8]  voltage accepted
-//[7:0]   check pattern
             if(|tx_cnt)begin
                 next_sd_mosi = data[tx_cnt-1];
-                next_state   = send_cmd8;
             end
             else if(rx[7:0]==8'h01)begin
-                next_init_ok = 1'b1;
+                next_state   = send_cmd55;
+                next_sd_mosi = `CMD55>>47;
+                next_data    = `CMD55;
+                next_tx_cnt  = 47;
             end
             else begin
-                next_state   = waita;
                 next_sd_mosi = 1'b1;
             end
         end
-        //waita:begin//cmd8 resp. SD2.0,support 2.7-3.6V supply
-        //    if(rx_valid)begin
-        //        if(rx[19:16]==4'b0001)begin
-        //            next_state  = send_cmd55;
-        //            next_data   = `CMD55;
-        //            next_tx_cnt = 48;
-        //        end
-        //        else begin
-        //            next_state = init_fail;
-        //        end
-        //        next_sd_csn = 1'b1;
-        //    end
-        //    else begin
-        //        next_sd_csn     = 1'b0;
-        //        next_sd_mosi = 1'b1;
-        //        next_state     = waita;
-        //    end
-        //end
-        //send_cmd55:begin
-        //    if(|tx_cnt)begin
-        //        next_sd_csn = 1'b0;
-        //        next_sd_mosi = data[tx_cnt-1];
-        //        next_state     = send_cmd55;
-        //        next_cnt       = tx_cnt==1 ? 127 : cnt;
-        //    end
-        //    else if(|cnt)begin
-        //       next_sd_mosi  = 1'b1;
-        //       if(rx_valid&rx[47:40]==8'h01)begin//CMD55 resp.
-        //           next_state  = send_acmd41;
-        //           next_data   = `ACMD41;
-        //           next_tx_cnt = 48;
-        //           next_cnt    = 0;
-        //           next_sd_csn = 1'b1;
-        //       end
-        //       else begin
-        //           next_state = send_cmd55;
-        //           next_sd_csn = 1'b0;
-        //       end
-        //    end
-        //    else begin
-        //        next_sd_csn = 1'b1;
-        //        next_state = init_fail;
-        //    end
-        //end
-        //send_acmd41:begin
-        //    if(|tx_cnt)begin
-        //        next_sd_csn = 1'b0;
-        //        next_sd_mosi = data[tx_cnt-1];
-        //        next_state     = send_acmd41;
-        //        next_cnt       = tx_cnt==1 ? 127 : cnt;
-        //    end
-        //    else if(|cnt)begin
-        //        next_sd_csn = 1'b0;
-        //        next_sd_mosi = 1'b1;
-        //        if(rx_valid&rx[47:40]==8'h00)begin
-        //            next_state = init_done;
-        //        end
-        //        else begin
-        //            next_state = send_acmd41;
-        //        end
-        //    end
-        //    else begin
-        //        next_sd_csn = 1'b1;
-        //        next_state = init_fail;
-        //    end
-        //end
-        //init_done:begin
-        //    next_init_ok    = 1'b1;
-        //    next_sd_csn     = 1'b1;
-        //    next_sd_mosi = 1'b1;
-        //end
-        //init_fail:begin
-        //    next_init_ok    = 1'b0;
-        //    next_sd_csn     = 1'b1;
-        //    next_sd_mosi = 1'b1;
-        //    next_state     = waitb;//resend cmd8,cmd55,cmd41
-        //end
-        //default:begin
-        //    next_state     = idle;//sverilog 'x
-        //    next_init_ok    = 1'b0;
-        //    next_sd_csn     = 1'b1;
-        //    next_sd_mosi = 1'b1;
-        //end
+        send_cmd55:begin
+            if(|tx_cnt)begin
+                next_sd_mosi = data[tx_cnt-1];
+            end
+            else if(rx[7:0]==8'h00)begin
+                next_state   = send_acmd41;
+                next_sd_mosi = `ACMD41>>47;
+                next_data    = `ACMD41;
+                next_tx_cnt  = 47;
+            end
+            else begin
+                next_sd_mosi = 1'b1;
+            end
+        end
+        send_acmd41:begin
+            if(|tx_cnt)begin
+                next_sd_mosi = data[tx_cnt-1];
+            end
+            else if(rx[7:0]==8'h01)begin
+                next_state   = init_done;
+                next_init_ok = 1'b1;
+                next_sd_csn  = 1'b1;
+                next_sd_mosi = 1'b1;
+            end
+            else begin
+                next_sd_mosi = 1'b1;
+            end
+        end
+        send_cmd17:begin
+            if(rx[47:40]==8'h0)begin
+                 next_state = rd_data;
+            end
+        end
+        rd_data:begin
+            if(req==1'b0&rx[7:0]==8'hfe)begin
+                req = 1'b1;
+                next_rx_cnt = 7;
+                next_cnt    = 512+2;//512+2 byte crc
+            end
+            else if(req==1'b1)begin
+                next_rx_cnt = (|cnt)&rx_cnt==0 ? 7 :rx_cnt - |rx_cnt;
+                next_wclk   = rx_cnt == 0;
+                next_miso   = rx[7:0];
+                next_req    = cnt==0&rx_cnt==0 ? 2'b10 : req;
+                if(cnt==0&rx_cnt==0)begin
+                    next_req    = 2'b10;
+                    next_csn    = 1'b1;
+                    next_cnt    = 7;
+                end
+            end
+            else if(req==2'b10)begin
+                next_cnt = cnt - |cnt;
+                next_wclk = 1'b0;
+                if(cnt==0)begin
+                    next_req = 0;
+                    next_state = rd_done;
+                end
+            end
+        end
+        init_done:begin
+            if(fifo_done)begin
+                next_state = idle;
+            end
+        end
+        rd_done:begin
+            if(fifo_done)begin
+                next_state = idle;
+            end
+        end
     endcase
 end
 endmodule
