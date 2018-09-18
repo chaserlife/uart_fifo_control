@@ -141,7 +141,7 @@ always@(*)begin
                 next_sd_csn  = 1'b0;
                 next_sd_mosi = data[tx_cnt-1];
             end
-            else if(rx[7:0]==8'h01)begin
+            else if(rx[47:40]==8'h01)begin
                 next_state   = send_cmd8;
                 next_sd_mosi = `CMD8>>47;
                 next_data    = `CMD8;
@@ -155,7 +155,7 @@ always@(*)begin
             if(|tx_cnt)begin
                 next_sd_mosi = data[tx_cnt-1];
             end
-            else if(rx[7:0]==8'h01)begin
+            else if(rx[47:40]==8'h01)begin
                 next_state   = send_cmd55;
                 next_sd_mosi = `CMD55>>47;
                 next_data    = `CMD55;
@@ -169,7 +169,7 @@ always@(*)begin
             if(|tx_cnt)begin
                 next_sd_mosi = data[tx_cnt-1];
             end
-            else if(rx[7:0]==8'h00)begin
+            else if(rx[47:40]==8'h00)begin
                 next_state   = send_acmd41;
                 next_sd_mosi = `ACMD41>>47;
                 next_data    = `ACMD41;
@@ -183,7 +183,7 @@ always@(*)begin
             if(|tx_cnt)begin
                 next_sd_mosi = data[tx_cnt-1];
             end
-            else if(rx[7:0]==8'h01)begin
+            else if(rx[47:40]==8'h01)begin
                 next_state   = init_done;
                 next_init_ok = 1'b1;
                 next_sd_csn  = 1'b1;
@@ -194,8 +194,14 @@ always@(*)begin
             end
         end
         send_cmd17:begin
-            if(rx[47:40]==8'h0)begin
+            if(|tx_cnt)begin
+                next_sd_mosi = data[tx_cnt-1];
+            end
+            else if(rx[47:40]==8'h0)begin
                  next_state = rd_data;
+            end
+            else begin
+                next_sd_mosi = 1'b1;
             end
         end
         rd_data:begin

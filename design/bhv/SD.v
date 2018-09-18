@@ -9,12 +9,11 @@ module SD(
     reg[5:0]  state,next_state;
     reg[5:0]  cmp,next_cmp;
     reg[47+48:0] data,next_data;
-    parameter idle        = 0;
-    parameter send_cmd0_r = 1;
-    parameter send_wait   = 2;
 
-parameter send_cmd0   =4'b0001, 
-          send_r1     =4'b0010;
+parameter idle        =4'h0,
+          send_cmd0   =4'h1, 
+          send_r1     =4'h2,
+          send_r2     =4'h3;
           //waitb       =4'b0011, 
           //send_cmd8   =4'b0100, 
           //waita       =4'b0101, 
@@ -25,11 +24,13 @@ parameter send_cmd0   =4'b0001,
           //dummy       =4'b1010, 
           //wait_st     =4'b1011; 
 reg[2:0] seq,next_seq;
-assign cmd0_r = tb.top.sd_initial.state==1&tb.top.sd_initial.tx_cnt==0|//cmd0
-                tb.top.sd_initial.state==2&tb.top.sd_initial.tx_cnt==0|//cmd8
-                tb.top.sd_initial.state==4&tb.top.sd_initial.tx_cnt==0;//cmdacmd41
-assign cmd5_r = tb.top.sd_initial.state==3&tb.top.sd_initial.tx_cnt==0|//cmd55
-                tb.top.sd_initial.state==3&tb.top.sd_initial.tx_cnt==0;//cmd55
+assign cmd0_r = tb.top.sd_initial.state==1&tb.top.sd_initial.tx_cnt==1|//cmd0
+                tb.top.sd_initial.state==2&tb.top.sd_initial.tx_cnt==1|//cmd8
+                tb.top.sd_initial.state==4&tb.top.sd_initial.tx_cnt==1|//acmd41
+                tb.top.sd_initial.state==5&tb.top.sd_initial.tx_cnt==1;//cmd17
+assign cmd5_r = tb.top.sd_initial.state==3&tb.top.sd_initial.tx_cnt==1|//cmd55
+                tb.top.sd_initial.state==3&tb.top.sd_initial.tx_cnt==1;//cmd55
+assign cmd17_r = tb.top.sd_initial.state==6&tb.top.sd_initial.req==0;//read_resp. start 8'hfe
 //tb.DUT.init_o&tb.DUT.sd_read.read_seq&!tb.DUT.sd_read.ok    ? tb.DUT.sd_read.state :
 //                    tb.DUT.init_o&tb.DUT.sd_write.write_seq&!tb.DUT.sd_write.ok ? tb.DUT.sd_write.state :
 //                    tb.DUT.sd_initial.state;
@@ -66,11 +67,16 @@ reg[7:0]  cnt,next_cnt;
                 if(cmd0_r)begin
                      next_data   = `DATA_R1_CMD0;
                      next_state  = send_r1;
-                     next_tx_cnt = 8;
+                     next_tx_cnt = 48;
                 end
                 else if(cmd5_r)begin
                      next_data   = `DATA_R1_CMD5;
                      next_state  = send_r1;
+                     next_tx_cnt = 48;
+                end
+                else if(cmd17_r)begin
+                     next_data   = 8'hfe;
+                     next_state  = send_r2;
                      next_tx_cnt = 8;
                 end
                 else begin
@@ -81,6 +87,30 @@ reg[7:0]  cnt,next_cnt;
             send_r1:begin
                 if(|tx_cnt)begin
                     next_SD_OUT = data[tx_cnt-1];
+                end
+                else begin
+                    next_SD_OUT = 1'b1;
+                    next_state  = idle;
+                end
+            end
+            send_r2:begin
+                if(tb.top.sd_initial.req==0&(|tx_cnt))begin
+                    next_SD_OUT = data[tx_cnt-1];
+                    if(tx_cnt==0)begin
+                        next_data    = $random;
+                        next_SD_DOUT = next_data[7];
+                        next_tx_cnt  = 7;
+                    end
+                end
+                else if(tb.top.sd_initial.req==1&(|tx_cnt))begin
+                    if(tx_cnt==0)begin
+                        next_data    = $random;
+                        next_SD_DOUT = next_data[7];
+                        next_tx_cnt  = 7;
+                    end
+                end
+                
+                else if(tb.top.sd_initial.req==1&(|tx_cnt)begin
                 end
                 else begin
                     next_SD_OUT = 1'b1;
