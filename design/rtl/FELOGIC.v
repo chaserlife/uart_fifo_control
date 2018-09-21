@@ -6,7 +6,8 @@ module FELOGIC(
     input[7:0]      mosi,
     output reg[7:0] cmd,
     output reg[15:0]rx_cnt,
-    output          fe_done
+    output          fe_done,
+    input           fifo_busy
 );
     reg[2:0] rx_flag;
     reg      busy,busy_sync,busy_sync1;
@@ -58,6 +59,9 @@ module FELOGIC(
         end
         else if(rok&rx_flag==3'b100)begin
             cmd <= mosi;
+        end
+        else if(!fifo_busy)begin
+            cmd <= 0;
         end
         else if(rok&rx_flag==3'b000)begin
             cmd <= 0;

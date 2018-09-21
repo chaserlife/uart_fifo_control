@@ -9,7 +9,7 @@ module fifo(
 //cmd01:write data to sd
 //cmd02:read data form sd
 //reg[7:0] ram[512:0];//depth
-reg[512:0][7:0] ram;//depth
+reg[516:0][7:0] ram;//depth
 reg[9:0] wcnt;
 always@(posedge wclk or negedge rst_n)begin
     if(!rst_n)begin

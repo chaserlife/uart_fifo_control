@@ -2,9 +2,9 @@ module SD(
     input      rst_n,
     input      SD_CLK,
     input      SD_IN,
-    output     SD_OUT
+    output reg SD_OUT
     );
-    reg       SD_OUT,next_SD_OUT;
+    reg       next_SD_OUT;
     reg[9:0]  tx_cnt,next_tx_cnt;
     reg[5:0]  state,next_state;
     reg[5:0]  cmp,next_cmp;
@@ -24,17 +24,16 @@ parameter idle        =4'h0,
           //dummy       =4'b1010, 
           //wait_st     =4'b1011; 
 reg[2:0] seq,next_seq;
-assign cmd0_r = tb.top.sd_initial.state==1&tb.top.sd_initial.tx_cnt==1|//cmd0
+assign cmd0_r = tb.top.sd_initial.state==1&tb.top.sd_initial.tx_cnt==1|//cmd0    resp. 0x01
                 tb.top.sd_initial.state==2&tb.top.sd_initial.tx_cnt==1|//cmd8
-                tb.top.sd_initial.state==4&tb.top.sd_initial.tx_cnt==1|//acmd41
-                tb.top.sd_initial.state==5&tb.top.sd_initial.tx_cnt==1;//cmd17
-assign cmd5_r = tb.top.sd_initial.state==3&tb.top.sd_initial.tx_cnt==1|//cmd55
                 tb.top.sd_initial.state==3&tb.top.sd_initial.tx_cnt==1;//cmd55
+assign cmd5_r = tb.top.sd_initial.state==4&tb.top.sd_initial.tx_cnt==1|//acmd41 resp.0x00
+                tb.top.sd_initial.state==5&tb.top.sd_initial.tx_cnt==1;//cmd17
 assign cmd17_r = tb.top.sd_initial.state==6&tb.top.sd_initial.req==0;//read_resp. start 8'hfe
 //tb.DUT.init_o&tb.DUT.sd_read.read_seq&!tb.DUT.sd_read.ok    ? tb.DUT.sd_read.state :
 //                    tb.DUT.init_o&tb.DUT.sd_write.write_seq&!tb.DUT.sd_write.ok ? tb.DUT.sd_write.state :
 //                    tb.DUT.sd_initial.state;
-reg[7:0]  cnt,next_cnt;
+reg[10:0]  cnt,next_cnt;
     always@(negedge SD_CLK or negedge rst_n)begin
         if(!rst_n)begin
             SD_OUT <= 1'b1;
@@ -58,9 +57,9 @@ reg[7:0]  cnt,next_cnt;
     always@(*)begin
         next_SD_OUT = SD_OUT;
         next_tx_cnt = tx_cnt - |tx_cnt;
+        next_cnt    = cnt;
         next_cmp    = cmp;
         next_data   = data;
-        next_cnt    = cnt - |cnt;
         next_seq    = seq;
         case(state)
             idle:begin
@@ -94,28 +93,39 @@ reg[7:0]  cnt,next_cnt;
                 end
             end
             send_r2:begin
-                if(tb.top.sd_initial.req==0&(|tx_cnt))begin
+                if(tb.top.sd_initial.req==0)begin
                     next_SD_OUT = data[tx_cnt-1];
                     if(tx_cnt==0)begin
                         next_data    = $random;
-                        next_SD_DOUT = next_data[7];
+                        next_SD_OUT = next_data[7];
                         next_tx_cnt  = 7;
+                        next_cnt = 514;
                     end
                 end
-                else if(tb.top.sd_initial.req==1&(|tx_cnt))begin
+                else if(tb.top.sd_initial.req==1)begin
+                     next_cnt = |tx_cnt ? cnt : cnt - |cnt;
                     if(tx_cnt==0)begin
-                        next_data    = $random;
-                        next_SD_DOUT = next_data[7];
+                        if(cnt==2|cnt==1)begin
+                           next_data = 8'hff;
+                        end
+                        else begin
+                            next_data    = $random;
+                        end
+                        next_SD_OUT = next_data[7];
                         next_tx_cnt  = 7;
                     end
+                    else begin
+                        next_SD_OUT = data[tx_cnt-1];
+                    end
                 end
-                
-                else if(tb.top.sd_initial.req==1&(|tx_cnt)begin
-                end
-                else begin
+                else if(tb.top.sd_initial.req==2)begin
                     next_SD_OUT = 1'b1;
                     next_state  = idle;
                 end
+                //else begin
+                //    next_SD_OUT = 1'b1;
+                //    next_state  = idle;
+                //end
             end
             //wait_st:begin
             //    if(|cnt)begin

@@ -9,6 +9,10 @@
 `define CMD17  {8'h51,sec[31:24],sec[23:16],sec[15:8],sec[7:0],8'hff}//block read
 `define CMD17  {8'h51,8'h0,8'h0,8'h0,8'h0,8'hff}//block read
 
-`define DATA_R1_CMD0 8'h01
-`define DATA_R1_CMD5 8'h00
+`define DATA_R1_CMD0 {8'h01,8'hff,8'hff,8'hff,8'hff,8'hff};
+`define DATA_R1_CMD5 {8'h00,8'hff,8'hff,8'hff,8'hff,8'hff};
 //   {8'h01,8'hff,8'hff,8'hff,8'hff,8'hff}//[47:40]=8'h01
+
+`define FCMD1 8'h01 //test uart,receive and send
+`define FCMD2 8'h02 //init_sd
+`define FCMD3 8'h03 //read_sd

@@ -14,7 +14,9 @@ module fifo_control(
     output reg  sd_init,
     input       init_ok,
     output reg  sd_ren,
-    input       sd_read_ok
+    input       sd_read_ok,
+    input[7:0]  mosi_data,
+    input       mosi_wclk
 );
 wire wok;
 wire fifo_rdy;
@@ -136,9 +138,13 @@ always@(*)begin
             end
         end
         sd_read:begin
+            next_wclk    = mosi_wclk;
+            next_en_fifo = 1'b1;
             if(sd_read_ok)begin
-                next_state = done;
-                next_sd_ren = 1'b0;
+                next_state   = send_tx;
+                next_sd_ren  = 1'b0;
+                next_rclk    = 1'b1;
+                next_start_tx = 1'b1;
             end
         end
         done:begin
@@ -159,7 +165,7 @@ fifo_top fifo_top(
     ,.miso      (miso      )
     ,.en_fifo   (en_fifo   )
     ,.mode      (0         )//TODO
-    ,.mosi_data (0         )//TODO
+    ,.mosi_data (mosi_data )
     ,.miso_data (0         )//TODO
     ,.start_tx  (start_tx  )
     ,.start_rx  (start_rx  )

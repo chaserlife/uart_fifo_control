@@ -20,7 +20,7 @@ SD SD(
     ,.SD_OUT(sd_miso )
 );
 initial begin
-    #40ms $display("ERROR:overtime");$finish;
+    #1000ms $display("ERROR:overtime");$finish;
 end
 initial begin
     clk = 1'b0;
@@ -40,5 +40,18 @@ task tx_pc(input[7:0] data);
     end
     mosi = 1'b1;
     #104us;
+endtask
+task init_sd;
+#100; tx_pc(8'h00);
+#100; tx_pc(8'h01);
+#100; tx_pc(8'h02);
+#100; tx_pc(8'h00);
+endtask
+task read_sd;
+#100; tx_pc(8'h00);
+#100; tx_pc(8'h01);
+#100; tx_pc(8'h03);
+#100; tx_pc(8'h00);
+
 endtask
 endmodule
