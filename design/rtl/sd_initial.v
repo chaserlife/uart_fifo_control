@@ -11,10 +11,12 @@ module sd_initial(
     input           sd_init,//start init
     output reg      init_ok,
     input           sd_ren,
+    input           sd_wen,
     input           fifo_busy,
     output reg      wclk,
     output reg[7:0] miso_data,
-    output reg      rd_ok
+    output reg      rd_ok,
+    output reg      wr_ok
     //output reg[3:0] state,
     //output reg[47:0] rx
 );
@@ -35,16 +37,18 @@ always@(posedge clk or negedge rst_n)begin
         sd_ck <= cnt_clk==5 ? ~sd_ck : sd_ck;
     end
 end
-parameter idle        = 4'b0000, //idle
-          dummy       = 4'h8,
-          send_cmd0   = 4'h1, //send cmd0
-          send_cmd8   = 4'h2, //send cmd8
-          send_cmd55  = 4'h3, //send cmd55
-          send_acmd41 = 4'h4, //send acmd41
-          send_cmd17  = 4'h5, //initial done
-          rd_data     = 4'h6, //initial fail
-          init_done   = 4'h7, //dummy
-          rd_done     = 4'h9;
+//parameter `idle        = 4'b0000, //`idle
+//          `dummy       = 4'h8,
+//          `send_cmd0   = 4'h1, //send cmd0
+//          `send_cmd8   = 4'h2, //send cmd8
+//          `send_cmd55  = 4'h3, //send cmd55
+//          `send_acmd41 = 4'h4, //send acmd41
+//          `send_cmd17  = 4'h5, //
+//          `rd_data     = 4'h6, //initial fail
+//          `send_cmd24  = 4'h7, //
+//          `wr_data     = 4'h8, //initial fail
+//          `init_done   = 4'h9, //`dummy
+//          `rd_done     = 4'h10;
 
 //receive sd data
 reg      en;//enalbe signal to start receive data
@@ -62,6 +66,7 @@ reg[2:0] req,next_req;
 reg[7:0] rx_cnt,next_rx_cnt;
 reg      next_wclk;
 reg      next_rd_ok;
+reg      next_wr_ok;
 always@(posedge sd_ck or negedge rst_n)begin
     if(!rst_n)begin
         rx <= 48'hff_ff_ff_ff_ff_ff;
@@ -75,7 +80,7 @@ always@(posedge sd_ck or negedge rst_n)begin
 end
 always@(negedge sd_ck or negedge rst_n)begin
     if(!rst_n)begin
-        state     <= idle;
+        state     <= `idle;
         init_ok   <= 1'b0;
         sd_mosi   <= 1'b1;
         sd_csn    <= 1'b1;
@@ -87,6 +92,7 @@ always@(negedge sd_ck or negedge rst_n)begin
         miso_data <= 0;
         wclk      <= 0;
         rd_ok     <= 0;
+        wr_ok     <= 0;
     end
     else begin
         state     <= next_state;
@@ -101,6 +107,7 @@ always@(negedge sd_ck or negedge rst_n)begin
         miso_data <= next_miso_data;
         wclk      <= next_wclk;
         rd_ok     <= next_rd_ok;
+        wr_ok     <= next_wr_ok;
     end
 end
 always@(*)begin
@@ -116,41 +123,50 @@ always@(*)begin
     next_miso_data = miso_data;
     next_wclk      = wclk;
     next_rd_ok     = rd_ok;
+    next_wr_ok     = wr_ok;
     case(state)
-        idle:begin
+        `idle:begin
             next_sd_csn     = 1'b1;
             next_sd_mosi    = 1'b1;
             next_init_ok    = init_ok;
             if(!init_ok&sd_init)begin
                 next_cnt       = 1023;
-                next_state     = dummy;
+                next_state     = `dummy;
             end
-            else if(init_ok&sd_ren)begin
-                next_state     = send_cmd17;
+            else if(init_ok&sd_ren)begin 
+                next_state     = `send_cmd17;
                 next_sd_mosi   = `CMD17>>47;
                 next_data      = `CMD17;
                 next_tx_cnt    = 47;
+                next_sd_csn    = 1'b0;
+            end
+            else if(init_ok&sd_wen)begin
+                next_state     = `send_cmd24;
+                next_sd_mosi   = `CMD24>>47;
+                next_data      = `CMD24;
+                next_tx_cnt    = 47;
+                next_sd_csn    = 1'b0;
             end
         end
-        dummy:begin
+        `dummy:begin
             next_cnt       = cnt  - |cnt;
             if(|cnt)begin
-                next_state = dummy;
+                next_state = `dummy;
             end
             else begin
                 next_sd_csn = 1'b1;
-                next_state  = send_cmd0;
+                next_state  = `send_cmd0;
                 next_data   = `CMD0;
                 next_tx_cnt = 48;
             end
         end
-        send_cmd0:begin//send cmd0
+        `send_cmd0:begin//send cmd0
             if(|tx_cnt)begin
                 next_sd_csn  = 1'b0;
                 next_sd_mosi = data[tx_cnt-1];
             end
             else if(rx[47:40]==8'h01)begin
-                next_state   = send_cmd8;
+                next_state   = `send_cmd8;
                 next_sd_mosi = `CMD8>>47;
                 next_data    = `CMD8;
                 next_tx_cnt  = 47;
@@ -159,12 +175,12 @@ always@(*)begin
                 next_sd_mosi = 1'b1;
             end
         end
-        send_cmd8:begin
+        `send_cmd8:begin
             if(|tx_cnt)begin
                 next_sd_mosi = data[tx_cnt-1];
             end
             else if(rx[47:40]==8'h01)begin
-                next_state   = send_cmd55;
+                next_state   = `send_cmd55;
                 next_sd_mosi = `CMD55>>47;
                 next_data    = `CMD55;
                 next_tx_cnt  = 47;
@@ -173,12 +189,12 @@ always@(*)begin
                 next_sd_mosi = 1'b1;
             end
         end
-        send_cmd55:begin
+        `send_cmd55:begin
             if(|tx_cnt)begin
                 next_sd_mosi = data[tx_cnt-1];
             end
             else if(rx[47:40]==8'h01)begin
-                next_state   = send_acmd41;
+                next_state   = `send_acmd41;
                 next_sd_mosi = `ACMD41>>47;
                 next_data    = `ACMD41;
                 next_tx_cnt  = 47;
@@ -187,18 +203,18 @@ always@(*)begin
                 next_sd_mosi = 1'b1;
             end
         end
-        send_acmd41:begin
+        `send_acmd41:begin
             if(|tx_cnt)begin
                 next_sd_mosi = data[tx_cnt-1];
             end
             else if(rx[47:40]==8'h00)begin
-                next_state   = init_done;
+                next_state   = `init_done;
                 next_init_ok = 1'b1;
                 next_sd_csn  = 1'b1;
                 next_sd_mosi = 1'b1;
             end
             else if(rx[47:40]==8'h01)begin
-                next_state   = send_cmd55;
+                next_state   = `send_cmd55;
                 next_sd_mosi = `CMD55>>47;
                 next_data    = `CMD55;
                 next_tx_cnt  = 47;
@@ -207,20 +223,83 @@ always@(*)begin
                 next_sd_mosi = 1'b1;
             end
         end
-        send_cmd17:begin
+        `send_cmd17:begin
             if(|tx_cnt)begin
                 next_sd_mosi = data[tx_cnt-1];
             end
             else if(rx[47:40]==8'h0)begin
-                 next_state = rd_data;
+                 next_state = `rd_data;
             end
             else begin
                 next_sd_mosi = 1'b1;
             end
         end
-        rd_data:begin
+        `send_cmd24:begin
+            if(|tx_cnt)begin
+                next_sd_mosi = data[tx_cnt-1];
+            end
+            else if(rx[47:40]==8'h0)begin
+                 next_state   = `wr_data;
+                 next_sd_mosi = 1'b1;
+                 next_data    = 8'hfe;
+                 next_tx_cnt  = 7;
+            end
+            else begin
+                next_sd_mosi = 1'b1;
+            end
+        end
+        `wr_data:begin
+            if(req==1'b0)begin//8'hfe
+                if(|tx_cnt)begin
+                    next_sd_mosi = data[tx_cnt-1];
+                end
+                else begin
+                    next_sd_mosi = next_cnt>>7;
+                    next_data    = next_cnt;
+                    next_tx_cnt  = 7;
+                    next_req     = 1;
+                    next_cnt     = 511;
+                end
+            end
+            else if(req==1)begin//512*data
+                if(|tx_cnt)begin
+                    next_sd_mosi = data[tx_cnt-1];
+                end
+                else if(|cnt)begin
+                    next_sd_mosi = next_cnt>>7;
+                    next_data = next_cnt;
+                    next_tx_cnt  = 7;
+                    next_cnt     = cnt - |cnt;
+                end
+                else begin
+                    next_sd_mosi = 8'hff;
+                    next_data    = 8'hff;
+                    next_tx_cnt  = 7;
+                    next_req     = 2;
+                    next_cnt     = 1;
+                end
+            end
+            else if(req==2)begin//2*8'hff
+                if(|tx_cnt)begin
+                    next_sd_mosi = data[tx_cnt-1];
+                end
+                else if(|cnt)begin
+                    next_sd_mosi = 8'hff>>7;
+                    next_data    = 8'hff;
+                    next_tx_cnt  = 7;
+                    next_cnt     = cnt - |cnt;
+                end
+                else begin
+                    next_state  = `wr_done;
+                    next_req    = 1'b0;
+                    next_sd_csn = 1'b1;
+                    next_wr_ok  = 1'b1;
+                end
+            end
+        end
+        `rd_data:begin
             if(req==1'b0&rx[7:0]==8'hfe)begin
-                next_req = 1'b1;
+                next_req    = 1'b1;
                 next_rx_cnt = 7;
                 next_cnt    = 512+2;//512+2 byte crc
             end
@@ -232,33 +311,40 @@ always@(*)begin
                 next_req       = cnt==0&rx_cnt==0 ? 2'b10 : req;
                 if(cnt==0&rx_cnt==0)begin
                     next_req    = 2'b10;
-                    next_sd_csn    = 1'b1;
+                    next_sd_csn = 1'b1;
                     next_cnt    = 7;
                 end
             end
             else if(req==2'b10)begin
                 next_wclk = 1'b0;
-                next_state = rd_done;
+                next_state = `rd_done;
                 next_rd_ok = 1'b1;
                 //next_cnt = cnt - |cnt;
                 //next_wclk = 1'b0;
                 //if(cnt==0)begin
                 //    next_req = 0;
-                //    next_state = rd_done;
+                //    next_state = `rd_done;
                 //end
             end
         end
-        init_done:begin
+        `init_done:begin
             if(fifo_busy)begin
-                next_state = idle;
+                next_state = `idle;
             end
         end
-        rd_done:begin
+        `rd_done:begin
             if(fifo_busy)begin
-                next_state = idle;
+                next_state = `idle;
                 next_rd_ok = 1'b0;
             end
         end
+        `wr_done:begin
+            if(fifo_busy)begin
+                next_state = `idle;
+                next_wr_ok = 1'b0;
+            end
+        end
+
     endcase
 end
 endmodule

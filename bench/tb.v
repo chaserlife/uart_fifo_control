@@ -41,6 +41,14 @@ task tx_pc(input[7:0] data);
     mosi = 1'b1;
     #104us;
 endtask
+task test_uart(input[15:0] num);
+#100; tx_pc(num[15:8]);
+#100; tx_pc(num[7:0]);
+for(int i=0;i<num;i++)begin
+    tx_pc($random);
+end
+#100; tx_pc(8'h0);
+endtask
 task init_sd;
 #100; tx_pc(8'h00);
 #100; tx_pc(8'h01);

@@ -24,12 +24,13 @@ parameter idle        =4'h0,
           //dummy       =4'b1010, 
           //wait_st     =4'b1011; 
 reg[2:0] seq,next_seq;
-assign cmd0_r = tb.top.sd_initial.state==1&tb.top.sd_initial.tx_cnt==1|//cmd0    resp. 0x01
-                tb.top.sd_initial.state==2&tb.top.sd_initial.tx_cnt==1|//cmd8
-                tb.top.sd_initial.state==3&tb.top.sd_initial.tx_cnt==1;//cmd55
-assign cmd5_r = tb.top.sd_initial.state==4&tb.top.sd_initial.tx_cnt==1|//acmd41 resp.0x00
-                tb.top.sd_initial.state==5&tb.top.sd_initial.tx_cnt==1;//cmd17
-assign cmd17_r = tb.top.sd_initial.state==6&tb.top.sd_initial.req==0;//read_resp. start 8'hfe
+assign cmd0_r = tb.top.sd_initial.state==`send_cmd0&tb.top.sd_initial.tx_cnt==1|//cmd0    resp. 0x01
+                tb.top.sd_initial.state==`send_cmd8&tb.top.sd_initial.tx_cnt==1|//cmd8
+                tb.top.sd_initial.state==`send_cmd55&tb.top.sd_initial.tx_cnt==1;//cmd55
+assign cmd5_r = tb.top.sd_initial.state==`send_acmd41&tb.top.sd_initial.tx_cnt==1|//acmd41 resp.0x00
+                tb.top.sd_initial.state==`send_cmd17&tb.top.sd_initial.tx_cnt==1|//cmd17
+                tb.top.sd_initial.state==`send_cmd24&tb.top.sd_initial.tx_cnt==1;//cmd24
+assign cmd17_r = tb.top.sd_initial.state==`rd_data&tb.top.sd_initial.req==0;//read_resp. start 8'hfe
 //tb.DUT.init_o&tb.DUT.sd_read.read_seq&!tb.DUT.sd_read.ok    ? tb.DUT.sd_read.state :
 //                    tb.DUT.init_o&tb.DUT.sd_write.write_seq&!tb.DUT.sd_write.ok ? tb.DUT.sd_write.state :
 //                    tb.DUT.sd_initial.state;

@@ -32,14 +32,15 @@ fifo_control fifo_control(
     ,.fifo_busy  (fifo_busy   )
     ,.fe_done    (fe_done     )
     ,.sd_ren     (sd_ren      )
+    ,.sd_wen     (sd_wen      )
     ,.sd_read_ok (rd_ok       )
+    ,.sd_write_ok(wr_ok       )
     ,.mosi_data  (mosi_data   )
     ,.mosi_wclk  (wclk        )
 );
 FELOGIC FELOGIC(
      .rst_n    (rst_n    )
     ,.rok      (rok      )
-    ,.fifo_done(fifo_done)
     ,.mosi     (mosi_rx  )
     ,.clk      (clk_bps  )
     ,.cmd      (cmd      )
@@ -59,8 +60,10 @@ sd_initial sd_initial(
     ,.sd_csn    (sd_csn    )
     ,.fifo_busy (fifo_busy )
     ,.sd_ren    (sd_ren    )
+    ,.sd_wen    (sd_wen    )
     ,.wclk      (wclk      )
     ,.miso_data (mosi_data )
     ,.rd_ok     (rd_ok     )
+    ,.wr_ok     (wr_ok     )
 );
 endmodule
