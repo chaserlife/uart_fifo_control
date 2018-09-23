@@ -18,7 +18,8 @@ module fifo_control(
     input       sd_read_ok,
     input       sd_write_ok,
     input[7:0]  mosi_data,
-    input       mosi_wclk
+    input       mosi_wclk,
+    input       en_fc
 );
 wire wok;
 wire fifo_rdy;
@@ -40,6 +41,18 @@ reg        req,next_req;
 reg        next_sd_init;
 reg        next_sd_ren;
 reg        next_sd_wen;
+reg       fe_done_sync,fe_done_sync1;
+always@(posedge clk or negedge rst_n)begin
+    if(!rst_n)begin
+        fe_done_sync  <= 1'b0;
+        fe_done_sync1 <= 1'b0;
+    end
+    else begin
+        fe_done_sync  <= fe_done;
+        fe_done_sync1 <= fe_done_sync;
+    end
+end
+assign fifo_fe_done = fe_done_sync1&!fe_done_sync;
 always@(posedge clk or negedge rst_n)begin
     if(!rst_n)begin
         state    <= idle;
@@ -86,21 +99,23 @@ always@(*)begin
     case(state)
         idle:begin
             next_start_rx = 1'b1;
-            if(cmd==8'h01)begin
-                next_state    = send_rx;
-                next_cnt      = rx_cnt;
-            end
-            else if(cmd==8'h02)begin
-                next_state    = initial_sd;
-                next_cnt      = rx_cnt;
-            end
-            else if(cmd==8'h03)begin
-                next_state    = sd_read;
-                next_sd_ren   = 1'b1;
-            end
-            else if(cmd==8'h04)begin
-                next_state  = sd_write;
-                next_sd_wen = 1'b1;
+            if(en_fc)begin
+                if(cmd==8'h01)begin
+                    next_state    = send_rx;
+                    next_cnt      = rx_cnt;
+                end
+                else if(cmd==8'h02)begin
+                    next_state    = initial_sd;
+                    next_cnt      = rx_cnt;
+                end
+                else if(cmd==8'h03)begin
+                    next_state    = sd_read;
+                    next_sd_ren   = 1'b1;
+                end
+                else if(cmd==8'h04)begin
+                    next_state  = sd_write;
+                    next_sd_wen = 1'b1;
+                end
             end
         end
         send_rx:begin
@@ -173,7 +188,7 @@ always@(*)begin
         done:begin
             next_start_tx = 1'b0;
             //next_state    = idle;
-            if(fe_done)begin
+            if(fifo_fe_done)begin
                 next_state   = idle;
             end
         end

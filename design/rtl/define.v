@@ -17,6 +17,8 @@
 `define FCMD1 8'h01 //test uart,receive and send
 `define FCMD2 8'h02 //init_sd
 `define FCMD3 8'h03 //read_sd
+`define FCMD4 8'h04 //write_sd
+`define FCMD5 8'h05 //set sec address
 
 
 //SD_STATE

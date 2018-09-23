@@ -60,6 +60,14 @@ task read_sd;
 #100; tx_pc(8'h01);
 #100; tx_pc(8'h03);
 #100; tx_pc(8'h00);
+endtask
+task write_sd;
+#100; tx_pc(8'h00);
+#100; tx_pc(8'h01);
+#100; tx_pc(8'h04);
+#100; tx_pc(8'h00);
+endtask
+task set_sec;
 
 endtask
 endmodule

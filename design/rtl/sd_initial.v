@@ -16,10 +16,15 @@ module sd_initial(
     output reg      wclk,
     output reg[7:0] miso_data,
     output reg      rd_ok,
-    output reg      wr_ok
+    output reg      wr_ok,
+    input[31:0]     sec
     //output reg[3:0] state,
     //output reg[47:0] rx
 );
+wire[47:0] write_single_cmd;
+wire[47:0] read_single_cmd;
+assign read_single_cmd  = `CMD17|(sec<<8);
+assign write_single_cmd = `CMD24|(sec<<8);
 reg[3:0] cnt_clk;
 always@(posedge clk or negedge rst_n)begin
     if(!rst_n)begin
@@ -135,15 +140,15 @@ always@(*)begin
             end
             else if(init_ok&sd_ren)begin 
                 next_state     = `send_cmd17;
-                next_sd_mosi   = `CMD17>>47;
-                next_data      = `CMD17;
+                next_sd_mosi   = read_single_cmd>>47;
+                next_data      = read_single_cmd;
                 next_tx_cnt    = 47;
                 next_sd_csn    = 1'b0;
             end
             else if(init_ok&sd_wen)begin
                 next_state     = `send_cmd24;
-                next_sd_mosi   = `CMD24>>47;
-                next_data      = `CMD24;
+                next_sd_mosi   = write_single_cmd>>47;
+                next_data      = write_single_cmd;
                 next_tx_cnt    = 47;
                 next_sd_csn    = 1'b0;
             end

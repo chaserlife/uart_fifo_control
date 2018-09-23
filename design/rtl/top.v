@@ -16,6 +16,7 @@ wire[7:0]  mosi_rx;
 wire[7:0]  cmd;
 wire[15:0] rx_cnt;
 wire[7:0]  mosi_data;
+wire[31:0] sec;
 fifo_control fifo_control(
      .clk        (clk         )
     ,.rst_n      (rst_n       )
@@ -37,17 +38,20 @@ fifo_control fifo_control(
     ,.sd_write_ok(wr_ok       )
     ,.mosi_data  (mosi_data   )
     ,.mosi_wclk  (wclk        )
+    ,.en_fc      (en_fc       )
 );
 FELOGIC FELOGIC(
-     .rst_n    (rst_n    )
-    ,.rok      (rok      )
-    ,.mosi     (mosi_rx  )
-    ,.clk      (clk_bps  )
-    ,.cmd      (cmd      )
-    ,.rx_cnt   (rx_cnt   )
-    ,.fe_done  (fe_done  )
-    ,.fifo_done(fifo_done)
+     .rst_n     (rst_n     )
+    ,.rok       (rok       )
+    ,.mosi      (mosi_rx   )
+    ,.clk       (clk_bps   )
+    ,.cmd       (cmd       )
+    ,.rx_cnt    (rx_cnt    )
+    ,.fe_done   (fe_done   )
+    ,.fifo_done (fifo_done )
     ,.fifo_busy (fifo_busy )
+    ,.sec       (sec       )
+    ,.en_fc     (en_fc     )
 );
 sd_initial sd_initial(
      .rst_n     (rst_n     )
@@ -65,5 +69,6 @@ sd_initial sd_initial(
     ,.miso_data (mosi_data )
     ,.rd_ok     (rd_ok     )
     ,.wr_ok     (wr_ok     )
+    ,.sec       (sec       )
 );
 endmodule
