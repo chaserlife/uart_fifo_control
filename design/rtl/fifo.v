@@ -15,6 +15,9 @@ always@(posedge wclk or negedge rst_n)begin
     if(!rst_n)begin
         wcnt <= 0;
     end
+    else if(wcnt==516)begin
+        wcnt <= 0;
+    end
     else begin
         wcnt <= wcnt + 1;
     end
@@ -22,6 +25,9 @@ end
 reg[9:0] rcnt;
 always@(posedge rclk or negedge rst_n)begin
     if(!rst_n)begin
+        rcnt <= 0;
+    end
+    else if(rcnt==516)begin
         rcnt <= 0;
     end
     else begin

@@ -20,7 +20,7 @@ SD SD(
     ,.SD_OUT(sd_miso )
 );
 initial begin
-    #1000ms $display("ERROR:overtime");$finish;
+    #3000ms $display("ERROR:overtime");$finish;
 end
 initial begin
     clk = 1'b0;

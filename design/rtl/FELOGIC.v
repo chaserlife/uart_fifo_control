@@ -34,7 +34,7 @@ module FELOGIC(
         else if(rok&rx_flag[2])begin
             en_fc <= 1'b1;
         end
-        else if(rok&rx_flag[3])begin
+        else if(rx_flag[0])begin
             en_fc <= 1'b0;
         end
     end
@@ -46,9 +46,9 @@ module FELOGIC(
         else if(rok&(|rx_flag[1:0]))begin
             rx_cnt <= {rx_cnt[7:0],mosi};
         end
-        else if(rok&rx_flag[2:0]==3'b000)begin
-            rx_cnt <= 0;
-        end
+        //else if(rok&rx_flag[2:0]==3'b000)begin
+        //    rx_cnt <= 0;
+        //end
         //else if(rok)begin
         //    rx_cnt <= rx_cnt;
         //end

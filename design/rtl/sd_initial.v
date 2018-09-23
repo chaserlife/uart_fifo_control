@@ -321,9 +321,10 @@ always@(*)begin
                 end
             end
             else if(req==2'b10)begin
-                next_wclk = 1'b0;
+                next_wclk  = 1'b0;
                 next_state = `rd_done;
                 next_rd_ok = 1'b1;
+                next_req   = 0;
                 //next_cnt = cnt - |cnt;
                 //next_wclk = 1'b0;
                 //if(cnt==0)begin
