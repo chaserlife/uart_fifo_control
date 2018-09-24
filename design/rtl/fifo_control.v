@@ -19,10 +19,13 @@ module fifo_control(
     input       sd_write_ok,
     input[7:0]  mosi_data,
     input       mosi_wclk,
-    input       en_fc
+    input       mosi_rclk,
+    input       en_fc,
+    output reg  set_fifo,
+    output[7:0] miso_fifo,
+    output      fifo_rdy
 );
 wire wok;
-wire fifo_rdy;
 reg[7:0] state,next_state;
 parameter idle       = 0,
           send_rx    = 1,
@@ -52,6 +55,7 @@ always@(posedge clk or negedge rst_n)begin
         fe_done_sync1 <= fe_done_sync;
     end
 end
+reg next_set_fifo;
 assign fifo_fe_done = fe_done_sync1&!fe_done_sync;
 always@(posedge clk or negedge rst_n)begin
     if(!rst_n)begin
@@ -66,6 +70,7 @@ always@(posedge clk or negedge rst_n)begin
         sd_init  <= 1'b0;
         sd_ren   <= 1'b0;
         sd_wen   <= 1'b0;
+        set_fifo <= 1'b0;
     end
     else begin
         state    <= next_state;
@@ -79,6 +84,7 @@ always@(posedge clk or negedge rst_n)begin
         sd_init  <= next_sd_init;
         sd_ren   <= next_sd_ren;
         sd_wen   <= next_sd_wen;
+        set_fifo <= next_set_fifo;
     end
 end
 //wire en = !req&rok;
@@ -87,7 +93,7 @@ always@(*)begin
     next_state    = state;
     next_start_rx = start_rx;
     next_start_tx = start_tx;
-    next_en_fifo  = 1'b0;
+    next_en_fifo  = en_fifo;
     next_cnt      = cnt;
     next_req      = req;
     next_wclk     = wclk;
@@ -96,6 +102,7 @@ always@(*)begin
     next_sd_init  = sd_init;
     next_sd_ren   = sd_ren;
     next_sd_wen   = sd_wen;
+    next_set_fifo = set_fifo;
     case(state)
         idle:begin
             next_start_rx = 1'b1;
@@ -103,6 +110,7 @@ always@(*)begin
                 if(cmd==8'h01)begin
                     next_state    = send_rx;
                     next_cnt      = rx_cnt;
+                    next_set_fifo = 1'b0;
                 end
                 else if(cmd==8'h02)begin
                     next_state    = initial_sd;
@@ -116,19 +124,29 @@ always@(*)begin
                     next_state  = sd_write;
                     next_sd_wen = 1'b1;
                 end
+                else if(cmd==8'h06)begin
+                    next_set_fifo = 1'b1;
+                    next_state    = send_rx;
+                    next_cnt      = rx_cnt;
+                end
             end
         end
         send_rx:begin
-            next_req = rok;
-            en       = !req&rok;
-            next_cnt = en ? cnt - |cnt : cnt;
+            next_req      = rok;
+            en            = !req&rok;
+            next_cnt      = en ? cnt - |cnt : cnt;
             if(en&(|cnt))begin
                 next_wclk = 1'b1;
             end
             else if(rok&(~|cnt))begin
-                next_state    = send_tx;
+                if(set_fifo)begin
+                    next_state     = done;
+                end
+                else begin
+                    next_state    = send_tx;
+                    next_rclk     = 1'b1;
+                end
                 next_wclk     = 1'b0;
-                next_rclk     = 1'b1;
                 next_start_tx = 1'b1;
             end
             else begin
@@ -167,6 +185,7 @@ always@(*)begin
             next_wclk    = mosi_wclk;
             next_en_fifo = 1'b1;
             if(sd_read_ok)begin
+                next_en_fifo = 1'b0;
                 next_state   = send_tx;
                 next_sd_ren  = 1'b0;
                 next_rclk    = 1'b1;
@@ -174,9 +193,12 @@ always@(*)begin
             end
         end
         sd_write:begin
+            next_rclk     = mosi_rclk;
             if(sd_write_ok)begin
                 next_state  = done;
                 next_sd_wen = 1'b0;
+            end
+            else if(set_fifo)begin
             end
             //if(sd_read_ok)begin
             //    next_state   = send_tx;
@@ -214,6 +236,7 @@ fifo_top fifo_top(
     ,.clk_bps   (clk_bps   )
     ,.wclk      (wclk      )
     ,.rclk      (rclk      )
+    ,.miso_fifo (miso_fifo )
 
 );
 endmodule

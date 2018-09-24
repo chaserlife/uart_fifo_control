@@ -44,10 +44,10 @@ endtask
 task test_uart(input[15:0] num);
 #100; tx_pc(num[15:8]);
 #100; tx_pc(num[7:0]);
+#100; tx_pc(8'h01);
 for(int i=0;i<num;i++)begin
     tx_pc($random);
 end
-#100; tx_pc(8'h0);
 endtask
 task init_sd;
 #100; tx_pc(8'h00);
@@ -67,7 +67,13 @@ task write_sd;
 #100; tx_pc(8'h04);
 #100; tx_pc(8'h00);
 endtask
-task set_sec;
-
+task set_sec(input[31:0] sec);
+#100; tx_pc(8'h00);
+#100; tx_pc(8'h04);
+#100; tx_pc(8'h05);
+#100; tx_pc(sec[31:24]);
+#100; tx_pc(sec[23:16]);
+#100; tx_pc(sec[15:8] );
+#100; tx_pc(sec[7:0]  );
 endtask
 endmodule

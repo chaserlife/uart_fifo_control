@@ -14,6 +14,7 @@ module fifo_top(
     input[3:0]  mode,     //buad mode select
     input[7:0]  mosi_data,//slave fifo out
     input[7:0]  miso_data,//slave fifo out
+    output[7:0] miso_fifo,
     output[7:0] miso_rx,
     output      fifo_rdy,
     input       start_tx,
@@ -22,7 +23,6 @@ module fifo_top(
     input       rclk
 );
 wire[7:0] miso_tx;
-wire[7:0] miso_fifo;
 wire[7:0] mosi_fifo;
 assign mosi_fifo = en_fifo ? mosi_data : miso_rx;
 assign miso_tx   = en_fifo ? miso_data : miso_fifo;

@@ -14,10 +14,14 @@ module sd_initial(
     input           sd_wen,
     input           fifo_busy,
     output reg      wclk,
+    output reg      rclk,
     output reg[7:0] miso_data,
     output reg      rd_ok,
     output reg      wr_ok,
-    input[31:0]     sec
+    input[31:0]     sec,
+    input           set_fifo,
+    input[7:0]      mosi_data,
+    input           fifo_rdy
     //output reg[3:0] state,
     //output reg[47:0] rx
 );
@@ -26,6 +30,7 @@ wire[47:0] read_single_cmd;
 assign read_single_cmd  = `CMD17|(sec<<8);
 assign write_single_cmd = `CMD24|(sec<<8);
 reg[3:0] cnt_clk;
+reg      fifo_empty,next_fifo_empty;
 always@(posedge clk or negedge rst_n)begin
     if(!rst_n)begin
         cnt_clk <= 0;
@@ -70,6 +75,7 @@ reg[10:0]cnt,next_cnt;
 reg[2:0] req,next_req;
 reg[7:0] rx_cnt,next_rx_cnt;
 reg      next_wclk;
+reg      next_rclk;
 reg      next_rd_ok;
 reg      next_wr_ok;
 always@(posedge sd_ck or negedge rst_n)begin
@@ -96,8 +102,10 @@ always@(negedge sd_ck or negedge rst_n)begin
         req       <= 0;
         miso_data <= 0;
         wclk      <= 0;
+        rclk      <= 0;
         rd_ok     <= 0;
         wr_ok     <= 0;
+        fifo_empty <= 1'b0;
     end
     else begin
         state     <= next_state;
@@ -111,8 +119,10 @@ always@(negedge sd_ck or negedge rst_n)begin
         req       <= next_req;
         miso_data <= next_miso_data;
         wclk      <= next_wclk;
+        rclk      <= next_rclk;
         rd_ok     <= next_rd_ok;
         wr_ok     <= next_wr_ok;
+        fifo_empty <= next_fifo_empty;
     end
 end
 always@(*)begin
@@ -127,8 +137,10 @@ always@(*)begin
     next_req       = req;
     next_miso_data = miso_data;
     next_wclk      = wclk;
+    next_rclk      = rclk;
     next_rd_ok     = rd_ok;
     next_wr_ok     = wr_ok;
+    next_fifo_empty = fifo_empty;
     case(state)
         `idle:begin
             next_sd_csn     = 1'b1;
@@ -244,26 +256,31 @@ always@(*)begin
                 next_sd_mosi = data[tx_cnt-1];
             end
             else if(rx[47:40]==8'h0)begin
-                 next_state   = `wr_data;
-                 next_sd_mosi = 1'b1;
-                 next_data    = 8'hfe;
-                 next_tx_cnt  = 7;
+                 next_state      = `wr_data;
+                 next_sd_mosi    = 1'b1;
+                 next_data       = 8'hfe;
+                 next_tx_cnt     = 7;
+                 next_rclk       = fifo_rdy ? 1'b0 : 1'b1;
+                 next_fifo_empty = fifo_rdy;
             end
             else begin
                 next_sd_mosi = 1'b1;
             end
         end
         `wr_data:begin
+            next_rclk = 1'b0;
             if(req==1'b0)begin//8'hfe
                 if(|tx_cnt)begin
                     next_sd_mosi = data[tx_cnt-1];
                 end
                 else begin
-                    next_sd_mosi = next_cnt>>7;
-                    next_data    = next_cnt;
-                    next_tx_cnt  = 7;
-                    next_req     = 1;
-                    next_cnt     = 511;
+                    next_fifo_empty = fifo_rdy;
+                    next_sd_mosi    = fifo_empty ? 0  : mosi_data >>7;
+                    next_data       = fifo_empty ? 0  : mosi_data;
+                    next_tx_cnt     = 7;
+                    next_req        = 1;
+                    next_cnt        = 511;
+                    next_rclk       = fifo_rdy ? 1'b0 : 1'b1;
                 end
             end
             else if(req==1)begin//512*data
@@ -271,10 +288,12 @@ always@(*)begin
                     next_sd_mosi = data[tx_cnt-1];
                 end
                 else if(|cnt)begin
-                    next_sd_mosi = next_cnt>>7;
-                    next_data = next_cnt;
-                    next_tx_cnt  = 7;
-                    next_cnt     = cnt - |cnt;
+                    next_fifo_empty = fifo_rdy;
+                    next_sd_mosi    = fifo_empty ? 0  : mosi_data >>7;
+                    next_data       = fifo_empty ? 0  : mosi_data;
+                    next_tx_cnt     = 7;
+                    next_cnt        = cnt - |cnt;
+                    next_rclk       = fifo_rdy ? 1'b0 : 1'b1;
                 end
                 else begin
                     next_sd_mosi = 8'hff;
